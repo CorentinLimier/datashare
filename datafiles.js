@@ -32,6 +32,7 @@ See LICENSE file at root of project for more informations
 
 		var delimiter = findDelimiter(dataFile);
 		updateDelimiter(dataFile, delimiter);
+		displayHeader(dataFile, true);
 		
 		$("#header-checkbox").prop("disabled", false);
 	}
@@ -64,7 +65,15 @@ See LICENSE file at root of project for more informations
 	}
 
 	var handleFileValidation = function(e){
-			$("#list-files ul").append("<li>" + dataFile.name + "</li>")
+			$("#list-files ul").append(
+					"<li>" 
+					+ dataFile.name 
+					+ " - "
+					+ dataFile.nbLines
+					+ " lignes - "
+					+ dataFile.nbColumns
+					+ " colonnes</li>"
+			)
 			dataFiles.push(dataFile);
 	}
 
@@ -100,6 +109,7 @@ See LICENSE file at root of project for more informations
 	var handleUpdateDelimiter = function(e){
 		var newDelimiter = $("#delimiter").val();
 		updateDelimiter(dataFile, newDelimiter);
+		displayHeader(dataFile, true);
 	}
 
 	var updateDelimiter = function(dataFile, delimiter){
@@ -111,41 +121,122 @@ See LICENSE file at root of project for more informations
 		dataFile.header = dataFile.lines[0].split(delimiter);
 		dataFile.nbColumns = dataFile.header.length;
 		$("#nbcolumns").html(dataFile.nbColumns);
-		displayHeader(dataFile);
 	}
 
-	var displayHeader = function(dataFile){
+	var displayHeader = function(dataFile, isFirstLineHeader){
 		var tbody = $("#header-table tbody");
 		tbody.html("");
 		var lineSplit;
-		if (dataFile.lines.length < 2){
-			lineSplit = dataFile.header
-		}
-		else{
+
+		if (isFirstLineHeader && dataFile.lines.length > 1){
 			lineSplit = dataFile.lines[1].split(dataFile.delimiter);
 		}
+		else{
+			lineSplit = dataFile.header
+		}
+
 		for (var i=0; i < dataFile.header.length; i++){
-			console.log(dataFile.header[i]);
-			tbody.append("<tr><td>" + dataFile.header[i] + "</td><td>" + lineSplit[i] + "</td><td>String</td></tr>")
+			var element = lineSplit[i];
+
+			var header_i = "";
+			if (isFirstLineHeader){
+				header_i = dataFile.header[i];
+			}
+
+			var rowTable = $(document.createElement('TR'));
+			var headerName = $(document.createElement('TD'));
+			var headerForm = $(document.createElement('INPUT'))
+				.attr('class', "form-control")
+				.attr("type", "text")
+				.attr("value", header_i);
+			var example = $(document.createElement('TD'))
+				.html(lineSplit[i]);
+			var format = $(document.createElement('TD'))
+
+			createFormFormat(element, format);
+
+			headerName.append(headerForm);
+			rowTable.append(headerName);
+			rowTable.append(example);
+			rowTable.append(format);
+			tbody.append(rowTable);
 		}
 	}
 
-	var displayFormHeader = function(dataFile){
-		var tbody = $("#header-table tbody");
-		tbody.html("");
-		var lineSplit = dataFile.lines[0].split(dataFile.delimiter);
-		for (var i=0; i < dataFile.header.length; i++){
-			console.log(dataFile.header[i]);
-			tbody.append("<tr><td><input class=\"form-control\" type=\"text\" ></td><td>" + lineSplit[i] + "</td><td>String</td></tr>")
+	var checkIfNumber = function(element){
+		return !isNaN(element);
+	}
+
+	var getFormatDate = function(element){
+		var checkFormat = [
+			{format : "%Y-%m-%d", regex : "[0-9]{4}-[0-9]{2}-[0-9]{2}"},
+		];
+
+		for (var i=0; i < checkFormat.length; i++){
+			var format = checkFormat[i].format;
+			var re = new RegExp(checkFormat[i].regex);
+			if (re.test(element)){
+				return format;
+			}
 		}
+
+		return undefined;
+	}
+
+	var createFormFormat = function(element, td){
+		var select = $(document.createElement('SELECT'))
+			.attr("class", "form-control");
+
+		var optionDate = $(document.createElement('OPTION'))
+			.html("Date");
+		var optionNumber = $(document.createElement('OPTION'))
+			.html("Number");
+		var optionString = $(document.createElement('OPTION'))
+			.html("String");
+
+		var formatDateForm = $(document.createElement('INPUT'))
+			.attr('class', "form-control")
+			.attr("type", "text")
+			.attr("value", formatDate);
+
+		var formatDate = getFormatDate(element);
+
+		if (formatDate != undefined){
+			optionDate.attr("selected", "selected");
+			formatDateForm.attr("value", formatDate);
+		}
+		else if (checkIfNumber(element)){
+			optionNumber.attr("selected", "selected");
+			formatDateForm.hide();
+		}
+		else{
+			optionString.attr("selected", "selected");
+			formatDateForm.hide();
+		}
+
+		select.append(optionDate);
+		select.append(optionNumber);
+		select.append(optionString);
+
+		select.on('change', function(){
+			if (this.value == "Date"){
+				formatDateForm.show();
+			}
+			else{
+				formatDateForm.hide();
+			}
+		})
+
+		td.append(select);
+		td.append(formatDateForm);
 	}
 
 	$("#header-checkbox").change(function(){
 		if (this.checked){
-			displayHeader(dataFile);
+			displayHeader(dataFile, true);
 		}
 		else{
-			displayFormHeader(dataFile);
+			displayHeader(dataFile, false);
 		}
 	})
 
@@ -167,5 +258,4 @@ See LICENSE file at root of project for more informations
 	$("#update-delimiter").click(handleUpdateDelimiter);
 	$("#upload-data").click(reinitDataFileModal);
 	checkBrowser();
-
 }());
